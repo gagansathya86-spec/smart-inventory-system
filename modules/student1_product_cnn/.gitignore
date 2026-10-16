@@ -1,0 +1,4 @@
+*.pt
+snapshots/*.jpg
+!snapshots/.gitkeep
+__pycache__/

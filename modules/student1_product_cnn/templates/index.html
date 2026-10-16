@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VisionCore | Fast 17-Category Live Product Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --bg-surface: #0e131f;
+      --bg-card: rgba(18, 24, 38, 0.75);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(6, 182, 212, 0.5);
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-violet: #8b5cf6;
+      --accent-rose: #f43f5e;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --glow-cyan: 0 0 24px rgba(6, 182, 212, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 10% 20%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
+        radial-gradient(at 90% 80%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* TOP HEADER */
+    header {
+      background: rgba(14, 19, 31, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .header-telemetry {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-emerald);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 10px var(--accent-emerald);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .telemetry-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: var(--bg-surface);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .telemetry-chip span {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    /* MAIN CONTAINER */
+    main {
+      flex: 1;
+      padding: 24px 28px;
+      display: grid;
+      grid-template-columns: 1fr 390px;
+      gap: 24px;
+      max-width: 1680px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 1080px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* VIDEO STREAM SECTION */
+    .stream-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .video-card {
+      position: relative;
+      background: #000;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), var(--glow-cyan);
+      aspect-ratio: 4 / 3;
+      max-height: 720px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stream-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .video-overlay-hud {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .hud-badge {
+      background: rgba(14, 19, 31, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-badge .highlight {
+      color: var(--accent-cyan);
+    }
+
+    /* CONTROLS TOOLBAR */
+    .controls-bar {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      padding: 9px 16px;
+      border-radius: var(--radius-sm);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #06b6d4);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0369a1, #0891b2);
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 110px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .select-dropdown {
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* RIGHT SIDEBAR */
+    .sidebar-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .sidebar-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-subtitle {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* 17 CATEGORIES GRID */
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .categories-grid::-webkit-scrollbar {
+      width: 5px;
+    }
+    .categories-grid::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+    }
+
+    .category-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(14, 19, 31, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .category-info {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .cat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      transition: all 0.2s ease;
+    }
+
+    .cat-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: capitalize;
+    }
+
+    .cat-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* ACTIVE CATEGORY STATE */
+    .category-badge.active {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 14px rgba(6, 182, 212, 0.2);
+      transform: scale(1.02);
+    }
+
+    .category-badge.active .cat-dot {
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    .category-badge.active .cat-name {
+      color: #fff;
+    }
+
+    .category-badge.active .cat-count {
+      background: var(--accent-cyan);
+      color: #07090e;
+      font-weight: 700;
+    }
+
+    /* RECENT EVENTS FEED */
+    .events-feed {
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+
+    .events-feed::-webkit-scrollbar {
+      width: 4px;
+    }
+    .events-feed::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+    }
+
+    .event-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.76rem;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .event-cat {
+      font-weight: 600;
+      color: var(--accent-cyan);
+      text-transform: capitalize;
+    }
+
+    .event-time {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      font-size: 0.7rem;
+    }
+
+    .event-conf {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-emerald);
+      font-weight: 600;
+    }
+
+    /* SNAPSHOTS DRAWER */
+    .snapshots-section {
+      margin-top: 10px;
+    }
+
+    .snapshots-tray {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 8px 0;
+    }
+
+    .snapshot-thumb {
+      position: relative;
+      flex-shrink: 0;
+      width: 110px;
+      height: 75px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .snapshot-thumb:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent-cyan);
+    }
+
+    .snapshot-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* TOAST ALERT */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(14, 19, 31, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-active);
+      color: var(--text-main);
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 999;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div>
+        <div class="brand-title">
+          VisionCore AI
+          <span class="brand-badge">Fast 17 Categories</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-telemetry">
+      <div class="status-pill">
+        <div class="pulse-dot"></div>
+        <span>LIVE INFERENCE</span>
+      </div>
+      <div class="telemetry-chip">
+        FPS: <span id="disp-fps">--</span>
+      </div>
+      <div class="telemetry-chip">
+        LATENCY: <span id="disp-latency">--ms</span>
+      </div>
+      <div class="telemetry-chip">
+        ACTIVE: <span id="disp-active">0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP -->
+  <main>
+    <!-- LEFT: VIDEO STREAM & CONTROLS -->
+    <div class="stream-column">
+      <div class="video-card" id="videoCard">
+        <img src="/video_feed" alt="Live Camera Product Recognition Stream" class="stream-img" id="streamImg" />
+
+        <div class="video-overlay-hud">
+          <div class="hud-badge">
+            <span style="color:#10b981;">●</span> LIVE WEBCAM FEED
+          </div>
+          <div class="hud-badge">
+            ENGINE: <span class="highlight">YOLO-World v2 Pre-baked</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTROLS TOOLBAR -->
+      <div class="controls-bar">
+        <div class="control-group">
+          <button class="btn btn-primary" id="btnSnapshot" onclick="takeSnapshot()">
+            📸 Take Snapshot
+          </button>
+          <button class="btn" id="btnPause" onclick="togglePause()">
+            ⏸️ Pause
+          </button>
+        </div>
+
+        <div class="control-group">
+          <div class="slider-container">
+            <span>Confidence:</span>
+            <input type="range" min="0.05" max="0.75" step="0.05" value="0.20" class="slider" id="confSlider" oninput="updateConfidence(this.value)">
+            <span id="confVal" style="color:var(--accent-cyan); font-family:'JetBrains Mono', monospace; font-weight:600;">20%</span>
+          </div>
+
+          <select class="select-dropdown" id="imgszSelect" onchange="updateResolution(this.value)">
+            <option value="320">320px (Ultra Fast ~18 FPS)</option>
+            <option value="384" selected>384px (Balanced ~16 FPS)</option>
+            <option value="480">480px (High Precision ~10 FPS)</option>
+          </select>
+
+          <button class="btn" id="btnAudio" onclick="toggleAudio()" title="Sound alert when new category detected">
+            🔔 Sound: ON
+          </button>
+        </div>
+      </div>
+
+      <!-- SNAPSHOTS SECTION -->
+      <div class="snapshots-section">
+        <div class="card-header" style="margin-bottom: 8px;">
+          <div class="card-title">Saved Snapshots</div>
+          <div class="card-subtitle" id="snapshotsCount">0 Captures</div>
+        </div>
+        <div class="snapshots-tray" id="snapshotsTray">
+          <span style="color:var(--text-dim); font-size:0.8rem;">Click 'Take Snapshot' to save high-res detections with labels.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: 17 CATEGORIES & LOG -->
+    <div class="sidebar-column">
+      <!-- 17 CATEGORIES MONITOR -->
+      <div class="sidebar-card">
+        <div class="card-header">
+          <div class="card-title">
+            🎯 17 Categories Monitor
+          </div>
+          <div class="card-subtitle">Real-Time Badges</div>
+        </div>
+
+        <div class="categories-grid" id="categoriesGrid">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- REAL-TIME DETECTION EVENTS -->
+      <div class="sidebar-card">
+        <div class="card-header">
+          <div class="card-title">
+            📜 Live Activity Feed
+          </div>
+          <div class="card-subtitle">Last Sighted</div>
+        </div>
+
+        <div class="events-feed" id="eventsFeed">
+          <div style="color:var(--text-dim); font-size:0.8rem; text-align:center; padding:20px;">
+            Awaiting detection events...
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast">
+    <span id="toastIcon">📸</span>
+    <span id="toastMsg">Snapshot saved!</span>
+  </div>
+
+  <script>
+    // 17 Categories Master List
+    const CATEGORIES = [
+      "biscuit", "chips", "pen", "scale", "phone",
+      "calculator", "headphone", "laptop", "books",
+      "pencils", "erasers", "keyboard", "mouse",
+      "toothpaste", "ball", "toothbrush", "wires"
+    ];
+
+    let soundEnabled = true;
+    let prevActiveCategories = new Set();
+    let audioCtx = null;
+
+    // Build initial 17 category badges in UI
+    function initCategoryBadges() {
+      const grid = document.getElementById("categoriesGrid");
+      grid.innerHTML = "";
+      CATEGORIES.forEach(cat => {
+        const badge = document.createElement("div");
+        badge.className = "category-badge";
+        badge.id = `badge-${cat}`;
+        badge.innerHTML = `
+          <div class="category-info">
+            <div class="cat-dot"></div>
+            <span class="cat-name">${cat}</span>
+          </div>
+          <span class="cat-count" id="count-${cat}">0</span>
+        `;
+        grid.appendChild(badge);
+      });
+    }
+
+    // Audio chime for new item detection
+    function playChime() {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.12); // A5
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.22);
+      } catch (e) {
+        console.warn("Audio chime failed:", e);
+      }
+    }
+
+    // Poll live statistics from backend
+    async function fetchStats() {
+      try {
+        const res = await fetch("/api/stats");
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update telemetry
+        document.getElementById("disp-fps").textContent = data.display_fps || "--";
+        document.getElementById("disp-latency").textContent = `${data.inference_time_ms || 0}ms`;
+        document.getElementById("disp-active").textContent = data.active_count || 0;
+
+        // Active categories check
+        const currentActive = new Set(data.active_categories || []);
+        
+        // Chime if brand new category appeared
+        let brandNew = false;
+        currentActive.forEach(cat => {
+          if (!prevActiveCategories.has(cat)) {
+            brandNew = true;
+          }
+        });
+        if (brandNew && currentActive.size > 0) {
+          playChime();
+        }
+        prevActiveCategories = currentActive;
+
+        // Update badge active glow and counts
+        CATEGORIES.forEach(cat => {
+          const badge = document.getElementById(`badge-${cat}`);
+          const countElem = document.getElementById(`count-${cat}`);
+          if (badge) {
+            if (currentActive.has(cat)) {
+              badge.classList.add("active");
+            } else {
+              badge.classList.remove("active");
+            }
+          }
+          if (countElem && data.category_counts && data.category_counts[cat] !== undefined) {
+            countElem.textContent = data.category_counts[cat];
+          }
+        });
+
+        // Update activity feed
+        const feed = document.getElementById("eventsFeed");
+        if (data.recent_history && data.recent_history.length > 0) {
+          feed.innerHTML = data.recent_history.map(item => `
+            <div class="event-row">
+              <span class="event-cat">${item.category}</span>
+              <span class="event-conf">${item.conf}</span>
+              <span class="event-time">${item.time}</span>
+            </div>
+          `).join("");
+        }
+
+      } catch (err) {
+        console.warn("Stats polling error:", err);
+      }
+    }
+
+    // Take high-resolution snapshot
+    async function takeSnapshot() {
+      try {
+        const res = await fetch("/api/snapshot", { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+          showToast("📸", `Snapshot saved: ${data.filename}`);
+          loadSnapshots();
+        } else {
+          showToast("⚠️", "Snapshot capture failed");
+        }
+      } catch (e) {
+        showToast("⚠️", "Error capturing snapshot");
+      }
+    }
+
+    // Toggle pause/resume
+    async function togglePause() {
+      try {
+        const res = await fetch("/api/toggle_pause", { method: "POST" });
+        const data = await res.json();
+        const btn = document.getElementById("btnPause");
+        if (data.paused) {
+          btn.textContent = "▶️ Resume";
+          showToast("⏸️", "Detection paused");
+        } else {
+          btn.textContent = "⏸️ Pause";
+          showToast("▶️", "Detection resumed");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Update confidence threshold
+    async function updateConfidence(val) {
+      const pct = Math.round(val * 100);
+      document.getElementById("confVal").textContent = `${pct}%`;
+      try {
+        await fetch("/api/set_conf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conf: parseFloat(val) })
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Update resolution
+    async function updateResolution(val) {
+      try {
+        await fetch("/api/set_imgsz", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imgsz: parseInt(val) })
+        });
+        showToast("⚙️", `Resolution changed to ${val}px`);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Toggle audio alerts
+    function toggleAudio() {
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById("btnAudio");
+      btn.textContent = soundEnabled ? "🔔 Sound: ON" : "🔕 Sound: OFF";
+      showToast(soundEnabled ? "🔔" : "🔕", `Audio alerts ${soundEnabled ? 'enabled' : 'disabled'}`);
+    }
+
+    // Load saved snapshot gallery
+    async function loadSnapshots() {
+      try {
+        const res = await fetch("/api/snapshots");
+        const data = await res.json();
+        const tray = document.getElementById("snapshotsTray");
+        document.getElementById("snapshotsCount").textContent = `${data.snapshots.length} Captures`;
+
+        if (data.snapshots.length === 0) {
+          tray.innerHTML = `<span style="color:var(--text-dim); font-size:0.8rem;">Click 'Take Snapshot' to save high-res detections with labels.</span>`;
+          return;
+        }
+
+        tray.innerHTML = data.snapshots.map(s => `
+          <div class="snapshot-thumb" onclick="window.open('${s.url}', '_blank')" title="${s.time} - Click to view">
+            <img src="${s.url}" alt="${s.filename}" />
+          </div>
+        `).join("");
+      } catch (e) {
+        console.warn("Failed to load snapshots:", e);
+      }
+    }
+
+    // Toast notification helper
+    function showToast(icon, msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toastIcon").textContent = icon;
+      document.getElementById("toastMsg").textContent = msg;
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 3000);
+    }
+
+    // Initialize on page load
+    window.addEventListener("DOMContentLoaded", () => {
+      initCategoryBadges();
+      loadSnapshots();
+      // Poll stats every 200ms for smooth live updates
+      setInterval(fetchStats, 200);
+    });
+  </script>
+</body>
+</html>
